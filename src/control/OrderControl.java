@@ -46,6 +46,7 @@ public class OrderControl extends HttpServlet {
                 }
             }
         }
+        
         for (int i = 0; i < list.size(); i++) {
             int count = 1;
             for (int j = i+1; j < list.size(); j++) {
@@ -57,11 +58,11 @@ public class OrderControl extends HttpServlet {
                 }
             }
         }
-        for (Cookie o : arr) {
-            o.setMaxAge(0);
-            response.addCookie(o);
-        }
-        response.sendRedirect("home");
+//        for (Cookie o : arr) {
+//            o.setMaxAge(0);
+//            response.addCookie(o);
+//        }
+        response.sendRedirect("getorder");
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

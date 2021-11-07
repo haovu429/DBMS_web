@@ -8,6 +8,7 @@ package dao;
 import context.DBContext;
 import entity.Account;
 import entity.Category;
+import entity.Order;
 import entity.Product;
 
 import java.sql.CallableStatement;
@@ -15,6 +16,7 @@ import java.sql.Connection;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -178,13 +180,13 @@ public class DAO {
 
     public List<Category> getAllCategory() {
         List<Category> list = new ArrayList<>();
-        String query = "select * from Category";
+//        String query = "select * from Category";
         try {
             conn = new DBContext().getConnection();//mo ket noi voi sql
-//            CallableStatement command = conn.prepareCall("{call sp_getAllCategory }");
-//	         ResultSet rs = command.executeQuery();
-            ps = conn.prepareStatement(query);
-            rs = ps.executeQuery();
+            CallableStatement command = conn.prepareCall("{call sp_getAllCategory }");
+	         ResultSet rs = command.executeQuery();
+//            ps = conn.prepareStatement(query);
+//            rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Category(rs.getInt(1),
                         rs.getString(2)));
@@ -195,15 +197,15 @@ public class DAO {
     }
 
     public Product getLast() {
-        String query = "select top 1 * from Product\n"
-                + "order by id desc";
+//        String query = "select top 1 * from Product\n"
+//                + "order by id desc";
         try {
             conn = new DBContext().getConnection();//mo ket noi voi sql
-//             CallableStatement command = conn.prepareCall("{call sp_getLastProduct }");
-//	         ResultSet rs = command.executeQuery();
+             CallableStatement command = conn.prepareCall("{call sp_getLastProduct }");
+	         ResultSet rs = command.executeQuery();
             
-            ps = conn.prepareStatement(query);
-            rs = ps.executeQuery();
+//            ps = conn.prepareStatement(query);
+//            rs = ps.executeQuery();
             while(rs.next()){
                 return new Product(rs.getInt(1),
                         rs.getString(2),
@@ -220,13 +222,12 @@ public class DAO {
     
     public List<Product> searchByName(String txtSearch) {
         List<Product> list = new ArrayList<>();
-       String query = "select * from Product\n" +"Where [name] like ?";
-//        String query = " SELECT * from dbo.fn_SearchProductName(?)";
+     
+        String query = " SELECT * from dbo.fn_SearchProductName(?)";
         try {
             conn = new DBContext().getConnection();//mo ket noi voi sql
             ps = conn.prepareStatement(query);
-            ps.setString(1,"%"+ txtSearch+"%");
-//            ps.setString(1, txtSearch);
+            ps.setString(1, txtSearch);
             rs = ps.executeQuery();
                  
 
@@ -552,18 +553,18 @@ public class DAO {
     }
     
     public void insertDetailOrder(String oid, String pid, String quantity)
-            {
-        try {
-            conn = new DBContext().getConnection();//mo ket noi voi sql
-            CallableStatement stmt = conn.prepareCall("{call sp_InsertDetailOrder(?,?,?) }");
-            ps.setInt(1,Integer.parseInt(oid));
-            ps.setInt(1, Integer.parseInt(pid));
-            ps.setInt(2, Integer.parseInt(quantity));
-           
-            ps.executeUpdate();
-        } catch (Exception e) {
-        }
-    }
+    {
+		try {
+		    conn = new DBContext().getConnection();//mo ket noi voi sql
+		    CallableStatement stmt = conn.prepareCall("{call sp_InsertDetailOrder(?,?,?) }");
+		    stmt.setInt(1,Integer.parseInt(oid));
+		    stmt.setInt(2, Integer.parseInt(pid));
+		    stmt.setInt(3, Integer.parseInt(quantity));
+		   
+		    stmt.execute();
+		} catch (Exception e) {
+		}
+}
     
     public void insertContact(String name, String email, String message
            ) {
@@ -679,6 +680,68 @@ public class DAO {
         } catch (Exception e) {
         }
     }
+    
+    public void saveOrder(String uid, List<Product> list) {
+    	try {
+            conn = new DBContext().getConnection();//mo ket noi voi sql
+            
+            //1.add Order to database
+            CallableStatement stmt = conn.prepareCall("{call sp_InsertOrderWithDetail (?) }");
+            stmt.setInt(1,Integer.parseInt(uid));
+            stmt.execute();
+            
+            //2.lấy oid Order vừa tạo 
+            int lastID = getLastOrderID();
+            
+            //3.add DetailOrder
+            for(Product p: list){
+            	insertDetailOrder(String.valueOf(lastID),String.valueOf(p.getId()), String.valueOf(p.getAmount()));
+            }
+
+        } catch (Exception e) {
+        }
+    	
+    }
+    
+    public static int getLastOrderID() {
+    	try {
+            Connection conn = new DBContext().getConnection();//mo ket noi voi sql
+            //2.lấy oid Order vừa tạo 
+            CallableStatement stmt = conn.prepareCall("{?= call fn_LastOrderID()}");
+            stmt.registerOutParameter(1,Types.INTEGER);
+            stmt.execute();
+            return stmt.getInt(1);
+            
+        } catch (Exception e) {
+        	e.getStackTrace();
+        }
+    	return -1;
+    }
+    public Order getLastOrder(){
+    	Order order = new Order();
+    	try {
+    		Connection conn = new DBContext().getConnection();//mo ket noi voi sql
+        	CallableStatement stmt = conn.prepareCall("{call sp_getOneOrder(?) }");
+        	int lastID = getLastOrderID();
+            stmt.setInt(1,lastID);
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                return new Order(rs.getInt(1),
+                		rs.getInt(2),
+                		rs.getInt(3),
+                        rs.getDouble(4),
+                        rs.getDate(5),
+                        rs.getString(6),
+                        rs.getString(7),
+                        rs.getString(8),
+                        rs.getString(9));
+            }
+
+    	}catch (Exception e) {
+        	e.getStackTrace();
+        }
+    	return null;
+    }
   
    	 
     
@@ -690,8 +753,14 @@ public class DAO {
 
    public static void main(String[] args) {
           DAO dao = new DAO();
+          List<Product> lst = new ArrayList<Product>();
+          Product p = dao.getProduct("1");
+          lst.add(p);
           
-          List<Product> list = dao.getViewProduct();
+          
+          dao.saveOrder("6", lst);
+          
+//          List<Product> list = dao.getViewProduct();
 //        List<Product> list1 = dao.getProductByCID("3");
 //        List<Category> listC = dao.getAllCategory();
 //        Product p = dao.getProductByID("1");
@@ -703,12 +772,6 @@ public class DAO {
 //        
      
 
-   for (Product o : list) {
-         System.out.println(o);
-  
-   
-
-}
    
    }
 }

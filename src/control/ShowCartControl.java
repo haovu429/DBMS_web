@@ -62,9 +62,7 @@ public class ShowCartControl extends HttpServlet {
             total = total + o.getAmount() * o.getPrice();
             amout = amout + o.getAmount();
         }
-        HttpSession session = request.getSession();
-        session.setAttribute("a", amout);
-       
+     
         request.setAttribute("list", list);
         request.setAttribute("amout", amout);
         request.setAttribute("total", total);
@@ -76,6 +74,7 @@ public class ShowCartControl extends HttpServlet {
        
         
         request.getRequestDispatcher("Cart.jsp").forward(request, response);
+       
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
