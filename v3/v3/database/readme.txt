@@ -1,0 +1,1 @@
+Trước khi chạy file Data hãy xoá user có tên "admin1" trong DBMS nếu có
